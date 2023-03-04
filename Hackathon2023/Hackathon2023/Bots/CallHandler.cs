@@ -12,10 +12,10 @@ using Hackathon2023.Cache;
 using Hackathon2023.Utilities;
 using Microsoft.Graph;
 using Microsoft.Graph.Communications.Calls;
-using Microsoft.Graph.Communications.Calls.Media;
+//using Microsoft.Graph.Communications.Calls.Media;
 using Microsoft.Graph.Communications.Common.Telemetry;
 using Microsoft.Graph.Communications.Resources;
-using Microsoft.Skype.Bots.Media;
+//using Microsoft.Skype.Bots.Media;
 
 
 /// <summary>
@@ -33,7 +33,8 @@ internal class CallHandler : HeartbeatHandler
 
     // this is an LRU cache with the MSI values, we update this Cache with the dominant speaker events
     // this way we can make sure that the muliview sockets are subscribed to the active (speaking) participants
-    private readonly LRUCache currentVideoSubscriptions = new LRUCache(SampleConstants.NumberOfMultiviewSockets + 1);
+    // SampleConstants.NumberOfMultiviewSockets
+    private readonly LRUCache currentVideoSubscriptions = new LRUCache(4 + 1);
 
     private readonly object subscriptionLock = new object();
 
@@ -51,21 +52,21 @@ internal class CallHandler : HeartbeatHandler
         this.Call.OnUpdated += this.CallOnUpdated;
 
         // subscribe to dominant speaker event on the audioSocket
-        this.Call.GetLocalMediaSession().AudioSocket.DominantSpeakerChanged += this.OnDominantSpeakerChanged;
+        //this.Call.GetLocalMediaSession().AudioSocket.DominantSpeakerChanged += this.OnDominantSpeakerChanged;
 
-        // subscribe to the VideoMediaReceived event on the main video socket
-        this.Call.GetLocalMediaSession().VideoSockets.FirstOrDefault().VideoMediaReceived += this.OnVideoMediaReceived;
+        //// subscribe to the VideoMediaReceived event on the main video socket
+        //this.Call.GetLocalMediaSession().VideoSockets.FirstOrDefault().VideoMediaReceived += this.OnVideoMediaReceived;
 
         // susbscribe to the participants updates, this will inform the bot if a particpant left/joined the conference
         this.Call.Participants.OnUpdated += this.ParticipantsOnUpdated;
 
-        foreach (var videoSocket in this.Call.GetLocalMediaSession().VideoSockets)
-        {
-            this.availableSocketIds.Add((uint)videoSocket.SocketId);
-        }
+        //foreach (var videoSocket in this.Call.GetLocalMediaSession().VideoSockets)
+        //{
+        //    this.availableSocketIds.Add((uint)videoSocket.SocketId);
+        //}
 
         // attach the botMediaStream
-        this.BotMediaStream = new BotMediaStream(this.Call.GetLocalMediaSession(), this.GraphLogger);
+        //this.BotMediaStream = new BotMediaStream(this.Call.GetLocalMediaSession(), this.GraphLogger);
     }
 
     /// <summary>
@@ -89,8 +90,8 @@ internal class CallHandler : HeartbeatHandler
     {
         base.Dispose(disposing);
 
-        this.Call.GetLocalMediaSession().AudioSocket.DominantSpeakerChanged -= this.OnDominantSpeakerChanged;
-        this.Call.GetLocalMediaSession().VideoSockets.FirstOrDefault().VideoMediaReceived -= this.OnVideoMediaReceived;
+        //this.Call.GetLocalMediaSession().AudioSocket.DominantSpeakerChanged -= this.OnDominantSpeakerChanged;
+        //this.Call.GetLocalMediaSession().VideoSockets.FirstOrDefault().VideoMediaReceived -= this.OnVideoMediaReceived;
 
         this.Call.OnUpdated -= this.CallOnUpdated;
         this.Call.Participants.OnUpdated -= this.ParticipantsOnUpdated;
@@ -100,7 +101,7 @@ internal class CallHandler : HeartbeatHandler
             participant.OnUpdated -= this.OnParticipantUpdated;
         }
 
-        this.BotMediaStream?.ShutdownAsync().ForgetAndLogExceptionAsync(this.GraphLogger);
+        //this.BotMediaStream?.ShutdownAsync().ForgetAndLogExceptionAsync(this.GraphLogger);
     }
 
     /// <summary>
@@ -179,7 +180,7 @@ internal class CallHandler : HeartbeatHandler
                 {
                     if (this.msiToSocketIdMapping.TryRemove(msi, out uint socketId))
                     {
-                        this.BotMediaStream.Unsubscribe(MediaType.Video, socketId);
+                        //this.BotMediaStream.Unsubscribe(MediaType.Video, socketId);
                         this.availableSocketIds.Add(socketId);
                     }
                 }
@@ -208,23 +209,24 @@ internal class CallHandler : HeartbeatHandler
             var msi = uint.Parse(participantSendCapableVideoStream.SourceId);
             lock (this.subscriptionLock)
             {
-                if (this.currentVideoSubscriptions.Count < this.Call.GetLocalMediaSession().VideoSockets.Count)
-                {
-                    // we want to verify if we already have a socket subscribed to the MSI
-                    if (!this.msiToSocketIdMapping.ContainsKey(msi))
-                    {
-                        if (this.availableSocketIds.Any())
-                        {
-                            socketId = this.availableSocketIds.Last();
-                            this.availableSocketIds.Remove((uint)socketId);
-                            subscribeToVideo = true;
-                        }
-                    }
+                //if (this.currentVideoSubscriptions.Count < this.Call.GetLocalMediaSession().VideoSockets.Count)
+                //{
+                //    // we want to verify if we already have a socket subscribed to the MSI
+                //    if (!this.msiToSocketIdMapping.ContainsKey(msi))
+                //    {
+                //        if (this.availableSocketIds.Any())
+                //        {
+                //            socketId = this.availableSocketIds.Last();
+                //            this.availableSocketIds.Remove((uint)socketId);
+                //            subscribeToVideo = true;
+                //        }
+                //    }
 
-                    updateMSICache = true;
-                    this.GraphLogger.Info($"[{this.Call.Id}:SubscribeToParticipant(socket {socketId} available, the number of remaining sockets is {this.availableSocketIds.Count}, subscribing to the participant {participant.Id})");
-                }
-                else if (forceSubscribe)
+                //    updateMSICache = true;
+                //    this.GraphLogger.Info($"[{this.Call.Id}:SubscribeToParticipant(socket {socketId} available, the number of remaining sockets is {this.availableSocketIds.Count}, subscribing to the participant {participant.Id})");
+                //}
+                //else 
+                if (forceSubscribe)
                 {
                     // here we know that all the sockets subscribed to a video we need to update the msi cache,
                     // and obtain the socketId to reuse with the new MSI
@@ -243,13 +245,13 @@ internal class CallHandler : HeartbeatHandler
                 }
             }
 
-            if (subscribeToVideo && socketId != uint.MaxValue)
-            {
-                this.msiToSocketIdMapping.AddOrUpdate(msi, socketId, (k, v) => socketId);
+            //if (subscribeToVideo && socketId != uint.MaxValue)
+            //{
+            //    this.msiToSocketIdMapping.AddOrUpdate(msi, socketId, (k, v) => socketId);
 
-                this.GraphLogger.Info($"[{this.Call.Id}:SubscribeToParticipant(subscribing to the participant {participant.Id} on socket {socketId})");
-                this.BotMediaStream.Subscribe(MediaType.Video, msi, VideoResolution.HD1080p, socketId);
-            }
+            //    this.GraphLogger.Info($"[{this.Call.Id}:SubscribeToParticipant(subscribing to the participant {participant.Id} on socket {socketId})");
+            //    this.BotMediaStream.Subscribe(MediaType.Video, msi, VideoResolution.HD1080p, socketId);
+            //}
         }
 
         // vbss viewer subscription
@@ -257,9 +259,9 @@ internal class CallHandler : HeartbeatHandler
         && x.Direction == MediaDirection.SendOnly);
         if (vbssParticipant != null)
         {
-            // new sharer
-            this.GraphLogger.Info($"[{this.Call.Id}:SubscribeToParticipant(subscribing to the VBSS sharer {participant.Id})");
-            this.BotMediaStream.Subscribe(MediaType.Vbss, uint.Parse(vbssParticipant.SourceId), VideoResolution.HD1080p, socketId);
+            //// new sharer
+            //this.GraphLogger.Info($"[{this.Call.Id}:SubscribeToParticipant(subscribing to the VBSS sharer {participant.Id})");
+            //this.BotMediaStream.Subscribe(MediaType.Vbss, uint.Parse(vbssParticipant.SourceId), VideoResolution.HD1080p, socketId);
         }
     }
 
@@ -300,7 +302,7 @@ internal class CallHandler : HeartbeatHandler
     private void OnVideoMediaReceived(object sender, VideoMediaReceivedEventArgs e)
     {
         // leave only logging in here
-        this.GraphLogger.Info($"[{this.Call.Id}]: Capturing image: [VideoMediaReceivedEventArgs(Data=<{e.Buffer.Data.ToString()}>, Length={e.Buffer.Length}, Timestamp={e.Buffer.Timestamp}, Width={e.Buffer.VideoFormat.Width}, Height={e.Buffer.VideoFormat.Height}, ColorFormat={e.Buffer.VideoFormat.VideoColorFormat}, FrameRate={e.Buffer.VideoFormat.FrameRate})]");
+        //this.GraphLogger.Info($"[{this.Call.Id}]: Capturing image: [VideoMediaReceivedEventArgs(Data=<{e.Buffer.Data.ToString()}>, Length={e.Buffer.Length}, Timestamp={e.Buffer.Timestamp}, Width={e.Buffer.VideoFormat.Width}, Height={e.Buffer.VideoFormat.Height}, ColorFormat={e.Buffer.VideoFormat.VideoColorFormat}, FrameRate={e.Buffer.VideoFormat.FrameRate})]");
 
         e.Buffer.Dispose();
     }

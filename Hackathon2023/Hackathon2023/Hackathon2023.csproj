@@ -17,6 +17,7 @@
     <PackageReference Include="AdaptiveCards" Version="3.0.0" />
     <PackageReference Include="AdaptiveExpressions" Version="4.19.3" />
     <PackageReference Include="Azure.Identity" Version="1.8.2" />
+    <PackageReference Include="CaptureManager" Version="1.22.0" />
     <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="6.0.14" />
     <PackageReference Include="Microsoft.Bot.Builder.AI.Luis" Version="4.19.3" />
     <PackageReference Include="Microsoft.Bot.Builder.Dialogs" Version="4.19.3" />
